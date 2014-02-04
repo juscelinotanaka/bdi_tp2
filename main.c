@@ -47,6 +47,180 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <string.h>
+
+#define NUMERO_BUCKETS 150
+#define BLOCOS_POR_BUCKET 10
+#define TAMANHO_BLOCO 4096
+#define REGISTROS_POR_BLOCO 8
+
+FILE *arquivoHash;
+
+typedef struct artigo{
+    int id;
+    char sigla[19];
+    char titulo[300];
+    int ano;
+    char autores[100];
+    int citacoes;
+    char citepage[30];
+    char timestamp[20];
+}tArtigo;
+
+int calculaChave (int id){
+    return id % NUMERO_BUCKETS;
+}
+
+void inicializarHash(){
+    int i;
+    
+    void *bloco = NULL;
+    bloco = malloc(sizeof(TAMANHO_BLOCO));
+    memset(bloco, 0, TAMANHO_BLOCO);
+    
+    arquivoHash = fopen("hash_file.txt", "rb+");
+    
+    for (i = 0; i < NUMERO_BUCKETS*BLOCOS_POR_BUCKET; i++) {
+        fwrite(bloco, 1, TAMANHO_BLOCO, arquivoHash);
+    }
+    
+    fclose(arquivoHash);
+}
+
+void inserirArtigo(int chave, tArtigo artigo){
+    
+    int i, j, achouEspacoLivre = 0;
+    
+    arquivoHash = fopen("hash_file.txt", "rb+");
+    
+    // Ponteiro para leitura do bloco
+    void *bloco = NULL;
+    memset(bloco, 0, TAMANHO_BLOCO);
+    
+    // Vetor de artigos para armazenar os registros lidos em 1 bloco
+    tArtigo *artigos;
+    artigos = (tArtigo*) malloc(sizeof(tArtigo)*REGISTROS_POR_BLOCO);
+    
+    // Posiciona o arquivo no bucket correspondente ao valor da chave
+    fseek(arquivoHash, chave * BLOCOS_POR_BUCKET * TAMANHO_BLOCO, SEEK_SET);
+    
+    // Le o primeiro bloco do bucket
+    fread(bloco, 1, TAMANHO_BLOCO, arquivoHash);
+    
+    // Copia os registros do bloco lido para um vetor de artigos
+    memcpy(artigos, bloco, sizeof(tArtigo)*REGISTROS_POR_BLOCO);
+    
+    // Loop para caminhar nos blocos de um bucket
+    for (i = 0; i < BLOCOS_POR_BUCKET; i++) {
+        
+        // Loop para caminhar nos registros de um bloco
+        for (j = 0; i < REGISTROS_POR_BLOCO; j++) {
+            if (artigos[j].id == 0) {
+                
+                achouEspacoLivre = 1;
+                
+                artigos[j] = artigo;
+                memcpy(bloco, artigos, sizeof(tArtigo)*REGISTROS_POR_BLOCO);
+                
+                fseek(arquivoHash, -TAMANHO_BLOCO, SEEK_CUR);
+                fwrite(bloco, 1, TAMANHO_BLOCO, arquivoHash);
+                
+                break;
+            }
+        }
+        
+        // Se nao achou nenhum espaco livre no bloco j, pula para o proximo bloco do bucket.
+        if (achouEspacoLivre == 0) {
+            fseek(arquivoHash, TAMANHO_BLOCO, SEEK_CUR);
+        }
+        else{
+            break;
+        }
+    }
+    
+    // Se nao achou nenhum espaco livre no bucket i, pula para o proximo bucket.
+    if (achouEspacoLivre == 0) {
+        inserirArtigo(chave+1, artigo);
+    }
+    
+    fclose(arquivoHash);
+}
+
+void buscarArtigo(int chave, tArtigo artigo){
+    
+}
+
+void upload(){
+    
+    tArtigo artigo;
+    
+    char str[2001];
+    char *id;
+    char *sigla;
+    char *titulo;
+    char *ano;
+    char *autores;
+    char *citacoes;
+    char *citepage;
+    char *timestamp;
+    int chave;
+    
+    FILE *arquivoEntrada = fopen("artigos2.txt", "r");
+    
+    if (arquivoEntrada == NULL) {
+        printf("Erro");
+        exit(0);
+    }
+    
+    arquivoHash = fopen("hash.txt", "rb+");
+    
+    while (!feof(arquivoEntrada)) {
+        fgets(str, 2000, arquivoEntrada);
+        
+        id = strtok(str, "\",\"");
+        artigo.id = atoi(id);
+        printf("ID: %d\n", artigo.id);
+        
+        sigla = strtok(NULL, "\",\"");
+        strcpy(artigo.sigla, sigla);
+        printf("Sigla: %s\n", artigo.sigla);
+        
+        titulo = strtok(NULL, "\",\"");
+        strcpy(artigo.titulo, titulo);
+        printf("Titulo: %s\n", artigo.titulo);
+        
+        ano = strtok(NULL, "\",\"");
+        artigo.ano = atoi(ano);
+        printf("Ano: %d\n", artigo.ano);
+        
+        autores = strtok(NULL, "\",\"");
+        strcpy(artigo.autores, autores);
+        printf("Autores: %s\n", artigo.autores);
+        
+        citacoes = strtok(NULL, "\",\"");
+        artigo.citacoes = atoi(citacoes);
+        printf("Citacoes: %d\n", artigo.citacoes);
+        
+        citepage = strtok(NULL, "\",\"");
+        strcpy(artigo.citepage, citepage);
+        printf("Citepage: %s\n", artigo.citepage);
+        
+        timestamp = strtok(NULL, "\",\"");
+        strcpy(artigo.timestamp, timestamp);
+        printf("Timestamp: %s\n\n", artigo.timestamp);
+        
+        chave = calculaChave(artigo.id);
+        printf("CHAVE: %d\n\n", chave);
+        
+        inserirArtigo(chave, artigo);
+        
+    }
+    
+    fclose(arquivoHash);
+    fclose(arquivoEntrada);
+    
+}
+
 
 #define M 2
 #define MM 4
