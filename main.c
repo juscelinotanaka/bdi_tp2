@@ -56,6 +56,7 @@
 
 FILE *arquivoHash;
 
+// Estrutura dos artigos
 typedef struct artigo{
     int id;
     char sigla[19];
@@ -67,10 +68,12 @@ typedef struct artigo{
     char timestamp[20];
 }tArtigo;
 
+// Função para calcular a chave do hash no qual o artigo será inserido.
 int calculaChave (int id){
     return id % NUMERO_BUCKETS;
 }
 
+// Função para inicializar o arquivo de hash vazio.
 void inicializarHash(){
     int i;
     
@@ -87,33 +90,34 @@ void inicializarHash(){
     fclose(arquivoHash);
 }
 
+// Função para inserção dos artigos no arquivo de hash
 void inserirArtigo(int chave, tArtigo artigo){
     
     int i, j, achouEspacoLivre = 0;
     
     arquivoHash = fopen("hash_file.txt", "rb+");
     
-    // Ponteiro para leitura do bloco
+    // Ponteiro para leitura do bloco.
     void *bloco = NULL;
     memset(bloco, 0, TAMANHO_BLOCO);
     
-    // Vetor de artigos para armazenar os registros lidos em 1 bloco
+    // Vetor de artigos para armazenar os registros lidos em 1 bloco.
     tArtigo *artigos;
     artigos = (tArtigo*) malloc(sizeof(tArtigo)*REGISTROS_POR_BLOCO);
     
-    // Posiciona o arquivo no bucket correspondente ao valor da chave
+    // Posiciona o arquivo no bucket correspondente ao valor da chave.
     fseek(arquivoHash, chave * BLOCOS_POR_BUCKET * TAMANHO_BLOCO, SEEK_SET);
     
-    // Le o primeiro bloco do bucket
+    // Lê o primeiro bloco do bucket.
     fread(bloco, 1, TAMANHO_BLOCO, arquivoHash);
     
-    // Copia os registros do bloco lido para um vetor de artigos
+    // Copia os registros do bloco lido para um vetor de artigos.
     memcpy(artigos, bloco, sizeof(tArtigo)*REGISTROS_POR_BLOCO);
     
-    // Loop para caminhar nos blocos de um bucket
+    // Loop para caminhar nos blocos de um bucket.
     for (i = 0; i < BLOCOS_POR_BUCKET; i++) {
         
-        // Loop para caminhar nos registros de um bloco
+        // Loop para caminhar nos registros de um bloco.
         for (j = 0; i < REGISTROS_POR_BLOCO; j++) {
             if (artigos[j].id == 0) {
                 
@@ -129,7 +133,7 @@ void inserirArtigo(int chave, tArtigo artigo){
             }
         }
         
-        // Se nao achou nenhum espaco livre no bloco j, pula para o proximo bloco do bucket.
+        // Se não achou nenhum espaço livre no bloco j, pula para o próximo bloco do bucket.
         if (achouEspacoLivre == 0) {
             fseek(arquivoHash, TAMANHO_BLOCO, SEEK_CUR);
         }
@@ -138,7 +142,7 @@ void inserirArtigo(int chave, tArtigo artigo){
         }
     }
     
-    // Se nao achou nenhum espaco livre no bucket i, pula para o proximo bucket.
+    // Se não achou nenhum espaço livre no bucket i, pula para o próximo bucket.
     if (achouEspacoLivre == 0) {
         inserirArtigo(chave+1, artigo);
     }
@@ -146,10 +150,12 @@ void inserirArtigo(int chave, tArtigo artigo){
     fclose(arquivoHash);
 }
 
-void buscarArtigo(int chave, tArtigo artigo){
+// Função para buscar um artigo no arquivo de hash.
+void buscarArtigo(int id){
     
 }
 
+// Função que lê o arquivo de entrada e manda inserir os artigos no arquivo hash.
 void upload(){
     
     tArtigo artigo;
@@ -175,8 +181,10 @@ void upload(){
     arquivoHash = fopen("hash.txt", "rb+");
     
     while (!feof(arquivoEntrada)) {
+        // Lê cada linha do arquivo
         fgets(str, 2000, arquivoEntrada);
         
+        // Quebra a string em tokens
         id = strtok(str, "\",\"");
         artigo.id = atoi(id);
         printf("ID: %d\n", artigo.id);
@@ -220,7 +228,6 @@ void upload(){
     fclose(arquivoEntrada);
     
 }
-
 
 #define M 2
 #define MM 4
