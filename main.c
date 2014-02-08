@@ -49,10 +49,31 @@
  
  */
 
+
+#define DEBUGANDO 0
+
 #define M 2
 #define MM 4
 #define NIL (-1L)
 #define T 7
+
+
+#define NUMERO_BUCKETS 3000
+#define BLOCOS_POR_BUCKET 100
+#define TAMANHO_BLOCO 4096
+#define REGISTROS_POR_BLOCO 8
+
+// Estrutura dos artigos
+typedef struct artigo{
+    int id;
+    char sigla[19];
+    char titulo[300];
+    int ano;
+    char autores[100];
+    int citacoes;
+    char citepage[30];
+    char timestamp[20];
+}tArtigo;
 
 
 typedef enum {
@@ -76,7 +97,9 @@ typedef struct{
 
 node rootnode;
 long start[2], root=NIL, freelist=NIL;
-FILE *fptree;
+FILE *fptree, *idtree, *titulotree;
+
+FILE *arquivoHash;
 
 /************************FUNCTION PROTOTYPES****************************/
 void error(char *str);
@@ -94,86 +117,171 @@ void rdstart(void);
 void wrstart(void);
 void printtree(long t);
 /**********************END FUNCTION PROTOTYPES***************************/
+void inicializarHash();
+void upload(char * path);
+int calculaChave (int id);
+int buscarArtigo(int id, int chave, int blocosLidos);
 
 
+int hashString(char *str)
+{
+    int hash = 5381;
+    int c;
+    
+    while ((c = *str++))
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    
+    return hash;
+}
 
+//upa string para maiusculo
+void convertToUpperCase(char *sPtr)
+{
+    while(*sPtr != '\0')
+        *sPtr = toupper((unsigned char)*sPtr);
+}
+
+char * idpath = "indexid.bin";
+char * titulopath = "indextitulo.bin";
+
+char msgStatus[30];
+int  sysStatus;
+
+tArtigo aBuscado;
+
+void setStatus(int sts) {
+    sysStatus = sts;
+    
+    switch (sts) {
+        case 0:
+            strcpy(msgStatus, "BASE VAZIA. FAZER UPLOAD.");
+            break;
+        case 1:
+            strcpy(msgStatus, "BASE POPULADA.");
+            break;
+            
+        default:
+            
+            break;
+    }
+    
+}
+
+void imprimirArtigo(tArtigo art) {
+    printf("ID: %d\n", art.id);
+    printf("Sigla: %s\n", art.sigla);
+    printf("Titulo: %s\n", art.titulo);
+    printf("Ano: %d\n", art.ano);
+    printf("Autores: %s\n", art.autores);
+    printf("Citacoes: %d\n", art.citacoes);
+    printf("Citepage: %s\n", art.citepage);
+    printf("Timestamp: %s\n\n", art.timestamp);
+}
 
 int main()
 {
-    int x, code=0, hash;
-    char ch, treefilnam[51], inpfilnam[51];
-    FILE *fpinp;
+    char acao, uploadpath[51];
+    int achou, idbusca;
     
-    /* FILE *fpinp;  */
+    printf("INICIALIZANDO... (ESTE PROCESSO PODE DEMORAR NA PRIMEIRA EXECUCAO)");
+    printf("\n");
+    inicializarHash();
     
-    puts("\nA estrutura da Arvore B sera representada por identacao.");
-    printf("Nome do Arquivo Binario para a Arvore B:  ");
-    scanf("%50s", treefilnam);
-    fptree = fopen(treefilnam, "r+b");
-    if (fptree == NULL) {
-        // abre o arquivo
-        fptree = fopen(treefilnam, "w+b");
-        wrstart();
-    }else{
-        rdstart();
-        printtree(root);
-    }
-    puts("Entre com a sequencia de inteiros seguido de / (pode ser vazia):");
-    while (scanf("%d", &x) == 1) {
-        hash = x % T;
-        insert(x, hash);
-        code = 1;
-    }
-    // ler a barra / de fim de linha
-    (void) getchar();
-    puts("");
+    printf("VERIFICANDO STATUS...");
+    printf("\n");
+    achou = buscarArtigo(1, calculaChave(1), 0);
     
-    //imprime a arvore ao fim da insercao
-    if (code)
-        printtree(root);
-    
-    printf("Ha numeros a serem lidos de um arquivo de texto? (Y/N): ");
-    scanf(" %c", &ch);
-    while (getchar() != '\n');   /*  Rest of line skipped  */
-    if (toupper(ch) == 'Y'){
-        printf("Nome do arquivo de texto: ");
-        scanf("%50s", inpfilnam);
-        if ((fpinp = fopen(inpfilnam, "r")) == NULL)
-            error("arquivo nao disponivel");
-        while (fscanf(fpinp, "%d", &x) == 1) {
-            hash = x % T;
-            insert(x, hash);
-        }
-        fclose(fpinp);
-        printtree(root);
+    if (!achou) {
+        setStatus(0);
+    } else {
+        setStatus(1);
     }
     
-    for ( ; ; ) {
-        printf("Informe um numero seguido de I, D, or P (para Inserir, \n"
-               "Deletar and Procurar), ou entre Q para sair: ");
-        code = scanf("%d", &x);
-        scanf(" %c", &ch);
-        ch = toupper(ch);
-        if (code)
-            
-            switch (ch) {
-                    
-                case 'I':
-                    hash = x % T;
-                    if (insert(x, hash) == SUCCESS)
-                        printtree(root);
-                    break;
-                    
-                case 'P': if (search(x) == NOTFOUND)
-                    puts("Not found");
-                    break;
-            }
-        else
-            if (ch == 'Q')
+    do {
+        printf("*****************************************************\n");
+        printf("* STATUS DO SISTEMA: %30s *\n", msgStatus);
+        printf("*****************************************************\n");
+        printf("* SELECIONE A OPCAO DESEJADA                        *\n");
+        printf("* 1 - UPLOAD ARQUIVO                                *\n");
+        printf("* 2 - BUSCA POR ID NO ARQUIVO DE DADOS              *\n");
+        printf("* 3 - BUSCA POR ID NO ARQUIVO DE INDICE             *\n");
+        printf("* 4 - BUSCA POR TITULO NO ARQUIVO DE INDICE         *\n");
+        printf("*                                                   *\n");
+        printf("* 0 - SAIR                                          *\n");
+        printf("*****************************************************\n");
+        printf("* Opcao: ");
+        scanf("%c", &acao);
+        (void) getchar();
+        
+        // printf("\n");
+        
+        switch (acao) {
+            case '0':
+                printf("BANCO DE DADOS ENCERRADO!\n");
                 break;
-    }
+                
+            case '1': //upload
+                printf("Nome do arquivo de entrada: ");
+                scanf("%50s", uploadpath);
+                
+                upload(uploadpath);
+                break;
+                
+            case '2': //findrec <id>
+                if (sysStatus == 1) {
+                    printf("BUSCA POR ID NO ARQUIVO DE DADOS\n\nID: ");
+                    scanf("%d", &idbusca);
+                    
+                    achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
+                    if (!achou) {
+                        printf("REGISTRO NAO ENCONTRADO.\n");
+                    } else {
+                        printf("REGISTRO ENCONTRADO:\n\n");
+                        imprimirArtigo(aBuscado);
+                    }
+                    
+                } else {
+                    printf("BASE NAO POPULADA. FAZER UPLOAD DO ARQUIVO DE DADOS PRIMEIRO.\n");
+                }
+                break;
+                
+            case '3': //seek1 <id>
+                if (sysStatus == 1) {
+                    
+                } else {
+                    printf("BASE NAO POPULADA. FAZER UPLOAD DO ARQUIVO DE DADOS PRIMEIRO.\n");
+                }
+                
+                break;
+                
+            case '4': //seek2 <titulo>
+                if (sysStatus == 1) {
+                    
+                } else {
+                    printf("BASE NAO POPULADA. FAZER UPLOAD DO ARQUIVO DE DADOS PRIMEIRO.\n");
+                }
+                break;
+                
+            case '5':
+                printtree(root);
+                break;
+                
+            default:
+                printf("OPCAO INVALIDA. ESCOLHA OUTRA OPCAO\n");
+                break;
+        }
+        
+        if (acao == '0') {
+            break;
+        }
+        
+        (void) getchar();
+    } while (acao != 0);
     
+    fptree = idtree;
     wrstart();
+    fclose(fptree);
+    
     fclose(fptree);
     return(0);
 }
@@ -194,13 +302,10 @@ void readnode(long t, node *pnode)
         return;
     }
     if (fseek(fptree, t, SEEK_SET))
-        error("fseek in readnode");
+        error("fseek in readnode 1");
     if (fread(pnode, sizeof(node), 1, fptree) == 0)
-        error("fread in readnode");
+        error("fread in readnode 2");
 }
-
-
-
 
 
 void writenode(long t, node *pnode)
@@ -445,9 +550,9 @@ void rdstart(void)
 {
     
     if (fseek(fptree, 0L, SEEK_SET))
-        error("fseek in rdstart");
+        error("fseek in rdstart 1");
     if (fread(start, sizeof(long), 2, fptree) == 0)
-        error("fread in rdstart");
+        error("fread in rdstart 2");
     readnode(start[0], &rootnode);
     root = start[0];
     freelist = start[1];
@@ -493,24 +598,23 @@ void printtree(long t)
 
 
 
-#define NUMERO_BUCKETS 3000
-#define BLOCOS_POR_BUCKET 100
-#define TAMANHO_BLOCO 4096
-#define REGISTROS_POR_BLOCO 8
 
-FILE *arquivoHash;
 
-// Estrutura dos artigos
-typedef struct artigo{
-    int id;
-    char sigla[19];
-    char titulo[300];
-    int ano;
-    char autores[100];
-    int citacoes;
-    char citepage[30];
-    char timestamp[20];
-}tArtigo;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Função para calcular a chave do hash no qual o artigo será inserido.
 int calculaChave (int id){
@@ -521,14 +625,65 @@ int calculaChave (int id){
 void inicializarHash(){
     int i;
     
+    idtree = fopen(idpath, "r+b");
+    fptree = idtree;
+    if (fptree == NULL) {
+        // abre o arquivo
+        idtree = fopen(idpath, "w+b");
+        fptree = idtree;
+        wrstart();
+    }else{
+        struct stat st;
+        stat(idpath, &st);
+        long long int size = st.st_size;
+        //verifica se o arquivo ja foi criado mas esta vazio
+        if (size > 0) {
+            //continua de onde parou os dados
+            rdstart();
+        } else {
+            //prepara para primeiro inicio
+            wrstart();
+        }
+        printtree(root);
+    }
+    
+    titulotree = fopen(titulopath, "r+b");
+    fptree = titulotree;
+    if (fptree == NULL) {
+        // abre o arquivo
+        titulotree = fopen(titulopath, "w+b");
+        fptree = titulotree;
+        wrstart();
+    }else{
+        struct stat st;
+        stat(titulopath, &st);
+        long long int size = st.st_size;
+        //verifica se o arquivo ja foi criado mas esta vazio
+        if (size > 0) {
+            //continua de onde parou os dados
+            rdstart();
+        } else {
+            //prepara para primeiro inicio
+            wrstart();
+        }
+        printtree(root);
+    }
+    
+    fptree = idtree;
+    
+    
     void *bloco = NULL;
     bloco = malloc(TAMANHO_BLOCO);
     memset(bloco, 0, TAMANHO_BLOCO);
     
-    arquivoHash = fopen("hash_file.txt", "rb+");
+    arquivoHash = fopen("hash_file.txt", "r+b");
     
-    for (i = 0; i < NUMERO_BUCKETS*BLOCOS_POR_BUCKET; i++) {
-        fwrite(bloco, 1, TAMANHO_BLOCO, arquivoHash);
+    if (arquivoHash == NULL) {
+        arquivoHash = fopen("hash_file.txt", "w+b");
+        
+        for (i = 0; i < NUMERO_BUCKETS*BLOCOS_POR_BUCKET; i++) {
+            fwrite(bloco, 1, TAMANHO_BLOCO, arquivoHash);
+        }
     }
     
     fclose(arquivoHash);
@@ -604,7 +759,7 @@ int inserirArtigo(int chave, tArtigo *artigo, int aux){
 }
 
 // Função para buscar um artigo no arquivo de hash.
-void buscarArtigo(int id, int chave, int blocosLidos){
+int buscarArtigo(int id, int chave, int blocosLidos){
     
     int i, j, achouArtigo = 0;
     
@@ -638,20 +793,32 @@ void buscarArtigo(int id, int chave, int blocosLidos){
             if (artigos[j].id == id) {
                 achouArtigo = 1;
                 
-                printf("BUCKET: %d\n\n", chave);
+                if (DEBUGANDO) {
+                    printf("BUCKET: %d\n\n", chave);
+                    
+                    printf("ID: %d\n", artigos[j].id);
+                    printf("Sigla: %s\n", artigos[j].sigla);
+                    printf("Titulo: %s\n", artigos[j].titulo);
+                    printf("Ano: %d\n", artigos[j].ano);
+                    printf("Autores: %s\n", artigos[j].autores);
+                    printf("Citacoes: %d\n", artigos[j].citacoes);
+                    printf("Citepage: %s\n", artigos[j].citepage);
+                    printf("Timestamp: %s\n\n", artigos[j].timestamp);
+                    printf("Numero de Blocos Lidos: %d\n", blocosLidos);
+                    printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
+                }
                 
-                printf("ID: %d\n", artigos[j].id);
-                printf("Sigla: %s\n", artigos[j].sigla);
-                printf("Titulo: %s\n", artigos[j].titulo);
-                printf("Ano: %d\n", artigos[j].ano);
-                printf("Autores: %s\n", artigos[j].autores);
-                printf("Citacoes: %d\n", artigos[j].citacoes);
-                printf("Citepage: %s\n", artigos[j].citepage);
-                printf("Timestamp: %s\n\n", artigos[j].timestamp);
-                printf("Numero de Blocos Lidos: %d\n", blocosLidos);
-                printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
                 
-                break;
+                aBuscado.id= artigos[j].id;
+                strcpy(aBuscado.sigla, artigos[j].sigla);
+                strcpy(aBuscado.titulo, artigos[j].titulo);
+                aBuscado.ano = artigos[j].ano;
+                strcpy(aBuscado.autores, artigos[j].autores);
+                aBuscado.citacoes = artigos[j].citacoes;
+                strcpy(aBuscado.citepage, artigos[j].citepage);
+                strcpy(aBuscado.timestamp, artigos[j].timestamp);
+                
+                return 1;
             }
         }
         
@@ -668,17 +835,22 @@ void buscarArtigo(int id, int chave, int blocosLidos){
     // Se não achou o artigo no bucket i, pula para o próximo bucket.
     if (achouArtigo == 0) {
         if (blocosLidos >= (NUMERO_BUCKETS*BLOCOS_POR_BUCKET)) {
-            printf("Artigo nao encontrado\n");
+            //printf("Artigo nao encontrado\n");
+            return 0;
         }
         else {
-            buscarArtigo(id, ((chave+1)%NUMERO_BUCKETS), blocosLidos);
+            return buscarArtigo(id, ((chave+1)%NUMERO_BUCKETS), blocosLidos);
         }
     }
-    
+    return -1;
 }
 
 // Função que lê o arquivo de entrada e manda inserir os artigos no arquivo hash.
-void upload(){
+void upload(char * path){
+    
+    printf("entrou\n");
+    printf("\n");
+    
     
     tArtigo *artigo;
     
@@ -693,14 +865,25 @@ void upload(){
     char *timestamp;
     int chave;
     
-    FILE *arquivoEntrada = fopen("artigos.csv", "r");
+    printf("aqui\n");
+    printf("\n");
+    
+    
+    FILE *arquivoEntrada = fopen(path, "r");
     
     if (arquivoEntrada == NULL) {
-        printf("Erro");
+        printf("ERRO AO ABRIR O ARQUIVO DE ENTRADA. VERIFIQUE O NOME DO ARQUIVO E/OU CAMINHO.");
+        printf("\n");
         exit(0);
     }
     
-    arquivoHash = fopen("hash.txt", "rb+");
+    arquivoHash = fopen("hash_file.txt", "rb+");
+    
+    if (arquivoHash == NULL) {
+        printf("ERRO AO ABRIR ARQUIVO HASH.");
+        printf("\n");
+        exit(0);
+    }
     
     while (!feof(arquivoEntrada)) {
         
@@ -713,50 +896,124 @@ void upload(){
         // Quebra a string em tokens.
         id = strtok(str, "\",\"");
         artigo->id = atoi(id);
-        printf("ID: %d\n", artigo->id);
+        if (DEBUGANDO) printf("ID: %d\n", artigo->id);
         
         sigla = strtok(NULL, "\",\"");
         strcpy(artigo->sigla, sigla);
-        printf("Sigla: %s\n", artigo->sigla);
+        if (DEBUGANDO) printf("Sigla: %s\n", artigo->sigla);
         
         titulo = strtok(NULL, "\",\"");
         strcpy(artigo->titulo, titulo);
-        printf("Titulo: %s\n", artigo->titulo);
+        if (DEBUGANDO) printf("Titulo: %s\n", artigo->titulo);
         
         ano = strtok(NULL, "\",\"");
         artigo->ano = atoi(ano);
-        printf("Ano: %d\n", artigo->ano);
+        if (DEBUGANDO) printf("Ano: %d\n", artigo->ano);
         
         autores = strtok(NULL, "\",\"");
         strcpy(artigo->autores, autores);
-        printf("Autores: %s\n", artigo->autores);
+        if (DEBUGANDO) printf("Autores: %s\n", artigo->autores);
         
         citacoes = strtok(NULL, "\",\"");
         artigo->citacoes = atoi(citacoes);
-        printf("Citacoes: %d\n", artigo->citacoes);
+        if (DEBUGANDO) printf("Citacoes: %d\n", artigo->citacoes);
         
         citepage = strtok(NULL, "\",\"");
         strcpy(artigo->citepage, citepage);
-        printf("Citepage: %s\n", artigo->citepage);
+        if (DEBUGANDO) printf("Citepage: %s\n", artigo->citepage);
         
         timestamp = strtok(NULL, "\",\"");
         strcpy(artigo->timestamp, timestamp);
-        printf("Timestamp: %s\n\n", artigo->timestamp);
+        if (DEBUGANDO) printf("Timestamp: %s\n\n", artigo->timestamp);
         
         chave = calculaChave(artigo->id);
-        printf("CHAVE: %d\n\n", chave);
+        if (DEBUGANDO) printf("CHAVE: %d\n\n", chave);
         
         
         int hash = inserirArtigo(chave, artigo, chave);
-        /*
-         insertArvore(hash, artigo->id);
-         insertArvore(hash, artigo->titulo);
-         */
+        
+        
+        //muda ponteiro para o arquivo de id
+        fptree = idtree;
+        if (insert(artigo->id, hash) == SUCCESS) {
+            printtree(root);
+        }else {
+            printf("erro inserir");
+        }
+        
     }
+    
+    setStatus(1);
     
     fclose(arquivoHash);
     fclose(arquivoEntrada);
     
+    
+    
+    
 }
 
+
+
+
+/* // insert que funciona
+ fptree = fopen(idpath, "r+b");
+ if (fptree == NULL) {
+ // abre o arquivo
+ fptree = fopen(idpath, "w+b");
+ wrstart();
+ }else{
+ struct stat st;
+ stat(idpath, &st);
+ long long int size = st.st_size;
+ //verifica se o arquivo ja foi criado mas esta vazio
+ if (size > 0) {
+ //continua de onde parou os dados
+ rdstart();
+ } else {
+ //prepara para primeiro inicio
+ wrstart();
+ }
+ printtree(root);
+ }
+ */
+
+
+/*
+ 
+ for ( ; ; ) {
+ printf("Informe um numero seguido de I, D, or P (para Inserir, \n"
+ "Deletar and Procurar), ou entre Q para sair: ");
+ code = scanf("%d", &x);
+ scanf(" %c", &ch);
+ ch = toupper(ch);
+ if (code)
+ 
+ switch (ch) {
+ 
+ case 'I':
+ hash = x % T;
+ if (insert(x, hash) == SUCCESS)
+ printtree(root);
+ break;
+ 
+ case 'P': if (search(x) == NOTFOUND)
+ puts("Not found");
+ break;
+ }
+ else
+ if (ch == 'Q')
+ break;
+ }
+ 
+ */
+
+
+
+
+/*
+ 
+ /Users/juscelintanaka/Documents/19.csv
+ 
+ */
 
