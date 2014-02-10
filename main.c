@@ -157,6 +157,7 @@ void inicializarHash();
 void upload(char * path);
 int calculaChave (int id);
 int buscarArtigo(int id, int chave, int blocosLidos);
+int buscarArtigoPorTitulo(char titulo[301], int chave, int blocosLidos);
 
 
 int hashString(char *str)
@@ -384,7 +385,7 @@ int main()
                     if (resultadoBusca == -1) {
                         printf("REGISTRO NAO ENCONTRADO NA ARVORE!\n");
                     } else {
-                        achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
+                        achou = buscarArtigoPorTitulo(tituloBusca, calculaChave(idbusca), 0);
                         if (!achou) {
                             printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE DADOS.\n");
                         } else {
@@ -1261,7 +1262,95 @@ int buscarArtigo(int id, int chave, int blocosLidos){
             return buscarArtigo(id, ((chave+1)%NUMERO_BUCKETS), blocosLidos);
         }
     }
-    return -1;
+    return 0;
+}
+
+
+// Função para buscar um artigo no arquivo de hash.
+int buscarArtigoPorTitulo(char titulo[301], int chave, int blocosLidos){
+    
+    int i, j, achouArtigo = 0;
+    
+    arquivoHash = fopen("hash_file.txt", "rb+");
+    
+    // Ponteiro para leitura do bloco.
+    void *bloco = NULL;
+    bloco = malloc(TAMANHO_BLOCO);
+    memset(bloco, 0, TAMANHO_BLOCO);
+    
+    // Vetor de artigos para armazenar os registros lidos em 1 bloco.
+    tArtigo *artigos;
+    artigos = (tArtigo*) malloc(sizeof(tArtigo)*REGISTROS_POR_BLOCO);
+    
+    // Posiciona o arquivo no bucket correspondente ao valor da chave.
+    fseek(arquivoHash, chave * BLOCOS_POR_BUCKET * TAMANHO_BLOCO, SEEK_SET);
+    
+    // Loop para caminhar nos blocos de um bucket.
+    for (i = 0; i < BLOCOS_POR_BUCKET; i++) {
+        
+        // Lê o primeiro bloco do bucket.
+        fread(bloco, 1, TAMANHO_BLOCO, arquivoHash);
+        
+        // Copia os registros do bloco lido para um vetor de artigos.
+        memcpy(artigos, bloco, sizeof(tArtigo)*REGISTROS_POR_BLOCO);
+        
+        blocosLidos++;
+        
+        // Loop para caminhar nos registros de um bloco.
+        for (j = 0; j < REGISTROS_POR_BLOCO; j++) {
+            if (!strcmp(artigos[j].titulo, titulo)) {
+                achouArtigo = 1;
+                
+                if (DEBUGANDO) {
+                    printf("BUCKET: %d\n\n", chave);
+                    
+                    printf("ID: %d\n", artigos[j].id);
+                    printf("Sigla: %s\n", artigos[j].sigla);
+                    printf("Titulo: %s\n", artigos[j].titulo);
+                    printf("Ano: %d\n", artigos[j].ano);
+                    printf("Autores: %s\n", artigos[j].autores);
+                    printf("Citacoes: %d\n", artigos[j].citacoes);
+                    printf("Citepage: %s\n", artigos[j].citepage);
+                    printf("Timestamp: %s\n\n", artigos[j].timestamp);
+                    printf("Numero de Blocos Lidos: %d\n", blocosLidos);
+                    printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
+                }
+                
+                
+                aBuscado.id= artigos[j].id;
+                strcpy(aBuscado.sigla, artigos[j].sigla);
+                strcpy(aBuscado.titulo, artigos[j].titulo);
+                aBuscado.ano = artigos[j].ano;
+                strcpy(aBuscado.autores, artigos[j].autores);
+                aBuscado.citacoes = artigos[j].citacoes;
+                strcpy(aBuscado.citepage, artigos[j].citepage);
+                strcpy(aBuscado.timestamp, artigos[j].timestamp);
+                
+                return 1;
+            }
+        }
+        
+        // Se não achou o artigo no bloco j, pula para o próximo bloco do bucket.
+        if (achouArtigo == 0) {
+            fseek(arquivoHash, TAMANHO_BLOCO, SEEK_CUR);
+        }
+        else{
+            break;
+        }
+    }
+    fclose(arquivoHash);
+    
+    // Se não achou o artigo no bucket i, pula para o próximo bucket.
+    if (achouArtigo == 0) {
+        if (blocosLidos >= (NUMERO_BUCKETS*BLOCOS_POR_BUCKET)) {
+            //printf("Artigo nao encontrado\n");
+            return 0;
+        }
+        else {
+            return buscarArtigoPorTitulo(titulo, ((chave+1)%NUMERO_BUCKETS), blocosLidos);
+        }
+    }
+    return 0;
 }
 
 
@@ -1351,7 +1440,7 @@ void upload(char * path){
         //int hash =
         inserirArtigo(chave, artigo, chave);
         
-        printf("Chave: %d\n", chaveGlobal);
+        printf("Chave: %d\n", artigo->id);
         
         openID();
         if (insert(artigo->id, chaveGlobal) == SUCCESS) {
@@ -1374,9 +1463,6 @@ void upload(char * path){
     
     fclose(arquivoHash);
     fclose(arquivoEntrada);
-    
-    
-    
     
 }
 
