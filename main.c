@@ -188,6 +188,8 @@ tArtigo aBuscado;
 
 int chaveGlobal;
 
+
+//configura o status do sistema
 void setStatus(int sts) {
     sysStatus = sts;
     
@@ -206,6 +208,7 @@ void setStatus(int sts) {
     
 }
 
+//imprime um artigo
 void imprimirArtigo(tArtigo art) {
     printf("ID: %d\n", art.id);
     printf("Sigla: %s\n", art.sigla);
@@ -217,6 +220,7 @@ void imprimirArtigo(tArtigo art) {
     printf("Timestamp: %s\n\n", art.timestamp);
 }
 
+// abre o arquivo para manipulacao do index de ID
 void openID() {
     fptree = fopen(idpath, "r+b");
     if (fptree == NULL) {
@@ -239,6 +243,7 @@ void openID() {
     }
 }
 
+// abre o arquivo para manipulacao do index de Titulo
 void openTitulo() {
     fptreeTitulo = fopen(titulopath, "r+b");
     if (fptreeTitulo == NULL) {
@@ -261,11 +266,13 @@ void openTitulo() {
     }
 }
 
+// fecha o arquivo para manipulacao do index de ID
 void closeID() {
     wrstart();
     fclose(fptree);
 }
 
+// fecha o arquivo para manipulacao do index de Titulo
 void closeTitulo() {
     wrstartTitulo();
     fclose(fptreeTitulo);
@@ -433,7 +440,7 @@ int main()
 }
 
 
-
+//informa um erro
 void error(char *str)
 {
     printf("\nError: %s\n", str);
@@ -441,7 +448,7 @@ void error(char *str)
 }
 
 
-
+//le um no da arvore
 void readnode(long t, node *pnode)
 {
     if (t == root){
@@ -454,7 +461,7 @@ void readnode(long t, node *pnode)
         error("fread in readnode 2");
 }
 
-
+// escreve um no da aravore para o arquivo
 void writenode(long t, node *pnode)
 {
     if (t == root)
@@ -466,7 +473,7 @@ void writenode(long t, node *pnode)
 }
 
 
-
+// pega um no da arvore
 long getnode(void)
 {
     long t;
@@ -487,7 +494,7 @@ long getnode(void)
 }
 
 
-
+// informa que o atributo foi encontrado
 int found(long t,  int i)
 {
     node nod;
@@ -504,6 +511,7 @@ int found(long t,  int i)
     
 }
 
+// informa que um titulo foi encontrado
 int foundTitulo(long t,  int i)
 {
     nodeTitulo nod;
@@ -521,8 +529,7 @@ int foundTitulo(long t,  int i)
 }
 
 
-
-
+//informa que nao foi encontrado o registro buscado
 void notfound(int x)
 {
     printf("Item %d not found\n", x);
@@ -530,7 +537,7 @@ void notfound(int x)
 
 
 
-
+// busca binaria na arvore de indexacao de ID
 int binsearch(int x, campo *a, int n)
 {
     int i, left, right;
@@ -551,7 +558,7 @@ int binsearch(int x, campo *a, int n)
     return(right);
 }
 
-
+// estrutura da busca no
 int search(int x)
 {
     int i, n, nosLidos = 0;
@@ -564,11 +571,7 @@ int search(int x)
         nosLidos++;
         readnode(t, &nod);
         k = nod.key;
-        //printf("Tnk: %d\n", k[0].valor);
         n = nod.cnt;
-        //        for (j=0; j < n; j++)
-        //            printf("  %d:%d", k[j].valor, k[j].hash);
-        //        puts("");
         i = binsearch(x, k, n);
         if (i < n && x == k[i].valor){
             printf("NOS LIDOS: %d\n\n", nosLidos);
@@ -703,8 +706,7 @@ status insert(int x, int hash)
     return(code);     /*  return value: SUCCESS  of DUPLICATEKEY  */
 }
 
-
-
+//libera um no da arvore
 void freenode(long t)
 {
     node nod;
@@ -716,10 +718,9 @@ void freenode(long t)
 }
 
 
-
+//reinicia o arquivo para receber dado
 void rdstart(void)
 {
-    
     if (fseek(fptree, 0L, SEEK_SET))
         error("fseek in rdstart 1");
     if (fread(start, sizeof(long), 2, fptree) == 0)
@@ -729,6 +730,7 @@ void rdstart(void)
     freelist = start[1];
 }
 
+//posiciona o arquivo na posicao para escrita
 void wrstart(void)
 {
     
@@ -742,6 +744,7 @@ void wrstart(void)
         writenode(root, &rootnode);
 }
 
+//imprime a arvore
 void printtree(long t)
 {
     static int position=0;
@@ -765,29 +768,7 @@ void printtree(long t)
 }
 
 
-/* */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* as funcoes a seguir sao as mesmas como descritas anteriormente, alterando que elas manipulam titulo (string) ao inves do ID (int) */
 
 void readnodeTitulo(long t, nodeTitulo *pnodeTitulo)
 {
