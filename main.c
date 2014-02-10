@@ -567,9 +567,9 @@ int search(int x)
         k = nod.key;
         //printf("Tnk: %d\n", k[0].valor);
         n = nod.cnt;
-//        for (j=0; j < n; j++)
-//            printf("  %d:%d", k[j].valor, k[j].hash);
-//        puts("");
+        //        for (j=0; j < n; j++)
+        //            printf("  %d:%d", k[j].valor, k[j].hash);
+        //        puts("");
         i = binsearch(x, k, n);
         if (i < n && x == k[i].valor){
             return(found(t,i));
@@ -683,8 +683,11 @@ status insert(int x, int hash)
     status code = ins(x, hash, root, &xnew, &hashnew, &tnew);
     
     if (code == DUPLICATEKEY) {
-        printf("Duplicate uid %d ignored \n", x);
-        exit(0);
+        if (DEBUGANDO) {
+            
+            printf("Duplicate uid %d ignored \n", x);
+            exit(0);
+        }
     } else
         if (code == INSERTNOTCOMPLETE){
             u = getnode();
@@ -983,9 +986,12 @@ status insertTitulo(char x[301], int hash)
     status code = insTitulo(x, hash, rootTitulo, xnew, &hashnew, &tnew);
     
     if (code == DUPLICATEKEY) {
-        printf("Duplicate uid ignored: ");
-        puts(x);
-        exit(0);
+        if (DEBUGANDO) {
+            
+            printf("Duplicate uid ignored: ");
+            puts(x);
+            exit(0);
+        }
     } else
         if (code == INSERTNOTCOMPLETE){
             u = getnodeTitulo();
