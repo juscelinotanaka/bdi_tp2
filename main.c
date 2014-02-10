@@ -140,13 +140,15 @@ void readnodeTitulo(long t, nodeTitulo *pnodeTitulo);
 void writenodeTitulo(long t, nodeTitulo *pnodeTitulo);
 long getnodeTitulo(void);
 int binsearchTitulo(char x[301], campoTitulo *a, int n);
-status searchTitulo(char x[301]);
+int searchTitulo(char x[301]);
 status insTitulo(char x[301], int hash, long t, char *y, int *z, long *u);
 status insertTitulo(char x[301], int hash);
 void freenodeTitulo(long t);
 void rdstartTitulo(void);
 void wrstartTitulo(void);
 void printtreeTitulo(long t);
+
+int foundTitulo(long t,  int i);
 
 /**********************END FUNCTION PROTOTYPES***************************/
 
@@ -183,6 +185,8 @@ int  sysStatus;
 
 tArtigo aBuscado;
 
+int chaveGlobal;
+
 void setStatus(int sts) {
     sysStatus = sts;
     
@@ -210,6 +214,60 @@ void imprimirArtigo(tArtigo art) {
     printf("Citacoes: %d\n", art.citacoes);
     printf("Citepage: %s\n", art.citepage);
     printf("Timestamp: %s\n\n", art.timestamp);
+}
+
+void openID() {
+    fptree = fopen(idpath, "r+b");
+    if (fptree == NULL) {
+        // abre o arquivo
+        fptree = fopen(idpath, "w+b");
+        wrstart();
+    }else{
+        struct stat st;
+        stat(idpath, &st);
+        long long int size = st.st_size;
+        //verifica se o arquivo ja foi criado mas esta vazio
+        if (size > 0) {
+            //continua de onde parou os dados
+            rdstart();
+        } else {
+            //prepara para primeiro inicio
+            wrstart();
+        }
+        //printtree(root);
+    }
+}
+
+void openTitulo() {
+    fptreeTitulo = fopen(titulopath, "r+b");
+    if (fptreeTitulo == NULL) {
+        // abre o arquivo
+        fptreeTitulo = fopen(titulopath, "w+b");
+        wrstartTitulo();
+    }else{
+        struct stat st;
+        stat(idpath, &st);
+        long long int size = st.st_size;
+        //verifica se o arquivo ja foi criado mas esta vazio
+        if (size > 0) {
+            //continua de onde parou os dados
+            rdstartTitulo();
+        } else {
+            //prepara para primeiro inicio
+            wrstartTitulo();
+        }
+        //printtreeTitulo(rootTitulo);
+    }
+}
+
+void closeID() {
+    wrstart();
+    fclose(fptree);
+}
+
+void closeTitulo() {
+    wrstartTitulo();
+    fclose(fptreeTitulo);
 }
 
 int main()
@@ -284,10 +342,12 @@ int main()
                     printf("BUSCA POR ID NO ARQUIVO DE INDICE\n\nID: ");
                     scanf("%d", &idbusca);
                     
+                    openID();
                     int resultadoBusca = search(idbusca);
+                    closeID();
                     
                     if (resultadoBusca == -1) {
-                        printf("REGISTRO NAO ENCONTRADO NA ARVORE!");
+                        printf("REGISTRO NAO ENCONTRADO NA ARVORE!\n");
                     } else {
                         achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
                         if (!achou) {
@@ -307,6 +367,32 @@ int main()
                 
             case '4': //seek2 <titulo>
                 if (sysStatus == 1) {
+                    //Building Semantic Mappings from Databases to Ontologies
+                    
+                    //Low-cost Outdoor Robot Platform for the Penn State Abington Mini Grand Challenge
+                    printf("BUSCA POR TITULO NO ARQUIVO DE INDICE\n\nTITULO: ");
+                    char tituloBusca[301];
+                    gets(tituloBusca);
+                    
+                    printf("Buscando: ");
+                    puts(tituloBusca);
+                    
+                    openTitulo();
+                    int resultadoBusca = searchTitulo(tituloBusca);
+                    closeTitulo();
+                    
+                    if (resultadoBusca == -1) {
+                        printf("REGISTRO NAO ENCONTRADO NA ARVORE!\n");
+                    } else {
+                        achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
+                        if (!achou) {
+                            printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE DADOS.\n");
+                        } else {
+                            printf("REGISTRO ENCONTRADO (%d):\n\n", resultadoBusca);
+                            imprimirArtigo(aBuscado);
+                        }
+                    }
+                    
                     
                 } else {
                     printf("BASE NAO POPULADA. FAZER UPLOAD DO ARQUIVO DE DADOS PRIMEIRO.\n");
@@ -314,11 +400,15 @@ int main()
                 break;
                 
             case '5':
+                openID();
                 printtree(root);
+                closeID();
                 break;
                 
             case '6':
+                openTitulo();
                 printtreeTitulo(rootTitulo);
+                closeTitulo();
                 break;
                 
             default:
@@ -333,11 +423,13 @@ int main()
         (void) getchar();
     } while (acao != 0);
     
-    wrstart();
-    fclose(fptree);
+    
+    
+    
     
     return(0);
 }
+
 
 
 void error(char *str)
@@ -404,9 +496,25 @@ int found(long t,  int i)
     
     return nod.key[i].hash;
     
-//    for (i=0; i < nod.cnt; i++)
-//        printf("  %d", nod.key[i].valor);
-//    puts("");
+    //    for (i=0; i < nod.cnt; i++)
+    //        printf("  %d", nod.key[i].valor);
+    //    puts("");
+    
+}
+
+int foundTitulo(long t,  int i)
+{
+    nodeTitulo nod;
+    
+    //printf("Found in position %d of node with contents:  ", i);
+    readnodeTitulo(t, &nod);
+    //printf("  %d : %d\n\n", nod.key[i].valor, nod.key[i].hash);
+    
+    return nod.key[i].hash;
+    
+    //    for (i=0; i < nod.cnt; i++)
+    //        printf("  %d", nod.key[i].valor);
+    //    puts("");
     
 }
 
@@ -717,12 +825,11 @@ long getnodeTitulo(void)
     return(t);
 }
 
-
 int binsearchTitulo(char x[301], campoTitulo *a, int n)
 {
     int i, left, right;
     
-    if (x <= a[0].valor)
+    if (x < a[0].valor || !strcmp(x, a[0].valor))
         return 0;
     if (x > a[n-1].valor)
         return n;
@@ -730,7 +837,7 @@ int binsearchTitulo(char x[301], campoTitulo *a, int n)
     right = n-1;
     while (right -  left > 1){
         i = (right + left)/2;
-        if (x <= a[i].valor)
+        if (x < a[i].valor || !strcmp(x, a[i].valor))
             right = i;
         else
             left = i;
@@ -739,30 +846,29 @@ int binsearchTitulo(char x[301], campoTitulo *a, int n)
 }
 
 
-status searchTitulo(char x[301])
+int searchTitulo(char x[300])
 {
-    int i, j, n;
+    int i, n;
     campoTitulo *k;
     nodeTitulo nod;
     long t = rootTitulo;
     
-    puts("Caminho Encontrado:");
+    puts("RESULTADO DA BUSCA:\n");
     while (t != NIL){
         readnodeTitulo(t, &nod);
         k = nod.key;
         //printf("Tnk: %d\n", k[0].valor);
         n = nod.cnt;
-        for (j=0; j < n; j++)
-            printf("  %s:%d", k[j].valor, k[j].hash);
-        puts("");
+        //        for (j=0; j < n; j++)
+        //            printf("  %d:%d", k[j].valor, k[j].hash);
+        //        puts("");
         i = binsearchTitulo(x, k, n);
-        if (i < n && x == k[i].valor){
-            found(t,i);
-            return(SUCCESS);
+        if (i < n && !strcmp(x, k[i].valor)) {
+            return(foundTitulo(t,i));
         }
         t = nod.ptr[i];
     }
-    return(NOTFOUND);
+    return(-1);
 }
 
 
@@ -973,53 +1079,14 @@ void printtreeTitulo(long t)
 
 // Função para calcular a chave do hash no qual o artigo será inserido.
 int calculaChave (int id){
-    return (id % (NUMERO_BUCKETS-1));
+    return (id % (NUMERO_BUCKETS));
 }
+
+
 
 // Função para inicializar o arquivo de hash vazio.
 void inicializarHash(){
     int i;
-    
-    fptree = fopen(idpath, "r+b");
-    if (fptree == NULL) {
-        // abre o arquivo
-        fptree = fopen(idpath, "w+b");
-        wrstart();
-    }else{
-        struct stat st;
-        stat(idpath, &st);
-        long long int size = st.st_size;
-        //verifica se o arquivo ja foi criado mas esta vazio
-        if (size > 0) {
-            //continua de onde parou os dados
-            rdstart();
-        } else {
-            //prepara para primeiro inicio
-            wrstart();
-        }
-        //printtree(root);
-    }
-    
-    fptreeTitulo = fopen(titulopath, "r+b");
-    if (fptreeTitulo == NULL) {
-        // abre o arquivo
-        fptreeTitulo = fopen(titulopath, "w+b");
-        wrstartTitulo();
-    }else{
-        struct stat st;
-        stat(idpath, &st);
-        long long int size = st.st_size;
-        //verifica se o arquivo ja foi criado mas esta vazio
-        if (size > 0) {
-            //continua de onde parou os dados
-            rdstartTitulo();
-        } else {
-            //prepara para primeiro inicio
-            wrstartTitulo();
-        }
-        //printtreeTitulo(rootTitulo);
-    }
-    
     
     void *bloco = NULL;
     bloco = malloc(TAMANHO_BLOCO);
@@ -1035,11 +1102,15 @@ void inicializarHash(){
         }
     }
     
+    //fseek(arquivoHash, 0L, SEEK_END);
+    //printf("%ld", ftell(arquivoHash));
+    
     fclose(arquivoHash);
 }
 
+
 // Função para inserção dos artigos no arquivo de hash
-int inserirArtigo(int chave, tArtigo *artigo, int aux){
+void inserirArtigo(int chave, tArtigo *artigo, int aux){
     
     int i, j, achouEspacoLivre = 0;
     
@@ -1078,7 +1149,8 @@ int inserirArtigo(int chave, tArtigo *artigo, int aux){
                 fseek(arquivoHash, -TAMANHO_BLOCO, SEEK_CUR);
                 fwrite(bloco, 1, TAMANHO_BLOCO, arquivoHash);
                 
-                return chave;
+                chaveGlobal = chave;
+                
                 break;
             }
         }
@@ -1098,13 +1170,11 @@ int inserirArtigo(int chave, tArtigo *artigo, int aux){
     if (achouEspacoLivre == 0) {
         if (chave == aux-1) {
             printf("Disco cheio, nao foi possivel inserir artigo!");
-            return -1;
         }
         else{
-            return inserirArtigo((chave+1)%NUMERO_BUCKETS, artigo, aux);
+            inserirArtigo((chave+1)%NUMERO_BUCKETS, artigo, aux);
         }
     }
-    return -1;
 }
 
 // Função para buscar um artigo no arquivo de hash.
@@ -1194,6 +1264,8 @@ int buscarArtigo(int id, int chave, int blocosLidos){
     return -1;
 }
 
+
+
 // Função que lê o arquivo de entrada e manda inserir os artigos no arquivo hash.
 void upload(char * path){
     
@@ -1244,8 +1316,6 @@ void upload(char * path){
         artigo->id = atoi(id);
         if (DEBUGANDO) printf("ID: %d\n", artigo->id);
         
-        printf("ART ID: %d\n", artigo->id);
-        
         sigla = strtok(NULL, "\",\"");
         strcpy(artigo->sigla, sigla);
         if (DEBUGANDO) printf("Sigla: %s\n", artigo->sigla);
@@ -1278,20 +1348,26 @@ void upload(char * path){
         if (DEBUGANDO) printf("CHAVE: %d\n\n", chave);
         
         
-        int hash = inserirArtigo(chave, artigo, chave);
+        //int hash =
+        inserirArtigo(chave, artigo, chave);
         
+        printf("Chave: %d\n", chaveGlobal);
         
-        if (insert(artigo->id, hash) == SUCCESS) {
+        openID();
+        if (insert(artigo->id, chaveGlobal) == SUCCESS) {
             //printtree(root);
         }else {
             printf("erro inserir");
         }
+        closeID();
         
-        if (insertTitulo(artigo->titulo, hash) == SUCCESS) {
+        openTitulo();
+        if (insertTitulo(artigo->titulo, chaveGlobal) == SUCCESS) {
             //printtreeTitulo(rootTitulo);
         }else {
             printf("erro inserir");
         }
+        closeTitulo();
     }
     
     setStatus(1);
@@ -1303,6 +1379,9 @@ void upload(char * path){
     
     
 }
+
+//1228800000
+//978944000
 
 
 
