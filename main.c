@@ -424,7 +424,7 @@ int main()
         if (acao == '0') {
             break;
         }
-        
+        printf("Pressiona um tecla para continuar...");
         getchar();
         
     } while (acao != 0);
@@ -837,15 +837,15 @@ int binsearchTitulo(char x[301], campoTitulo *a, int n)
 {
     int i, left, right;
     
-    if (x < a[0].valor || !strcmp(x, a[0].valor))
+    if (x < a[0].valor || !strcmp(x, a[0].valor)) //if (x < a[0].valor || !strcmp(x, a[0].valor))
         return 0;
-    if (x > a[n-1].valor)
+    if (x > a[n-1].valor) //if (x > a[n-1].valor)
         return n;
     left = 0;
     right = n-1;
     while (right -  left > 1){
         i = (right + left)/2;
-        if (x < a[i].valor || !strcmp(x, a[i].valor))
+        if (x < a[i].valor || !strcmp(x, a[i].valor)) //if (x < a[i].valor || !strcmp(x, a[i].valor))
             right = i;
         else
             left = i;
