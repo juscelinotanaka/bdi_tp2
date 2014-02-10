@@ -284,17 +284,20 @@ int main()
                     printf("BUSCA POR ID NO ARQUIVO DE INDICE\n\nID: ");
                     scanf("%d", &idbusca);
                     
-                    search(idbusca);
+                    int resultadoBusca = search(idbusca);
                     
-                    /*
-                    achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
-                    if (!achou) {
-                        printf("REGISTRO NAO ENCONTRADO.\n");
+                    if (resultadoBusca == -1) {
+                        printf("REGISTRO NAO ENCONTRADO NA ARVORE!");
                     } else {
-                        printf("REGISTRO ENCONTRADO:\n\n");
-                        imprimirArtigo(aBuscado);
+                        achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
+                        if (!achou) {
+                            printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE DADOS.\n");
+                        } else {
+                            printf("REGISTRO ENCONTRADO:\n\n");
+                            imprimirArtigo(aBuscado);
+                        }
                     }
-                    */
+                    
                     
                 } else {
                     printf("BASE NAO POPULADA. FAZER UPLOAD DO ARQUIVO DE DADOS PRIMEIRO.\n");
@@ -312,6 +315,10 @@ int main()
                 
             case '5':
                 printtree(root);
+                break;
+                
+            case '6':
+                printtreeTitulo(rootTitulo);
                 break;
                 
             default:
@@ -393,7 +400,7 @@ int found(long t,  int i)
     
     //printf("Found in position %d of node with contents:  ", i);
     readnode(t, &nod);
-    printf("  %d : %d\n\n", nod.key[i].valor, nod.key[i].hash);
+    //printf("  %d : %d\n\n", nod.key[i].valor, nod.key[i].hash);
     
     return nod.key[i].hash;
     
@@ -437,12 +444,12 @@ int binsearch(int x, campo *a, int n)
 
 int search(int x)
 {
-    int i, j, n;
+    int i, n;
     campo *k;
     node nod;
     long t = root;
     
-    puts("RESULTADO DA BUSCA:");
+    puts("RESULTADO DA BUSCA:\n");
     while (t != NIL){
         readnode(t, &nod);
         k = nod.key;
@@ -457,7 +464,7 @@ int search(int x)
         }
         t = nod.ptr[i];
     }
-    return(NOTFOUND);
+    return(-1);
 }
 
 
@@ -966,7 +973,7 @@ void printtreeTitulo(long t)
 
 // Função para calcular a chave do hash no qual o artigo será inserido.
 int calculaChave (int id){
-    return (id % NUMERO_BUCKETS);
+    return (id % (NUMERO_BUCKETS-1));
 }
 
 // Função para inicializar o arquivo de hash vazio.
@@ -1237,6 +1244,8 @@ void upload(char * path){
         artigo->id = atoi(id);
         if (DEBUGANDO) printf("ID: %d\n", artigo->id);
         
+        printf("ART ID: %d\n", artigo->id);
+        
         sigla = strtok(NULL, "\",\"");
         strcpy(artigo->sigla, sigla);
         if (DEBUGANDO) printf("Sigla: %s\n", artigo->sigla);
@@ -1283,9 +1292,6 @@ void upload(char * path){
         }else {
             printf("erro inserir");
         }
-        
-        
-        
     }
     
     setStatus(1);
