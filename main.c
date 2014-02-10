@@ -95,9 +95,27 @@ typedef struct{
 } node;
 
 
+typedef struct {
+    char valor[301];
+    int hash;
+} campoTitulo;
+
+
+typedef struct{
+    int cnt;
+    campoTitulo key[MM];
+    long ptr[MM+1];
+} nodeTitulo;
+
+
 node rootnode;
 long start[2], root=NIL, freelist=NIL;
-FILE *fptree, *idtree, *titulotree;
+FILE *fptree, *titulotree;
+
+nodeTitulo rootnodeTitulo;
+long startTitulo[2], rootTitulo=NIL, freelistTitulo=NIL;
+FILE *fptreeTitulo;
+
 
 FILE *arquivoHash;
 
@@ -106,10 +124,10 @@ void error(char *str);
 void readnode(long t, node *pnode);
 void writenode(long t, node *pnode);
 long getnode(void);
-void found(long t,  int i);
+int found(long t,  int i);
 void notfound(int x);
 int binsearch(int x, campo *a, int n);
-status search(int x);
+int search(int x);
 status ins(int x, int hash, long t, int *y, int *hashnew, long *u);
 status insert(int x, int hash);
 void freenode(long t);
@@ -117,6 +135,22 @@ void rdstart(void);
 void wrstart(void);
 void printtree(long t);
 /**********************END FUNCTION PROTOTYPES***************************/
+
+void readnodeTitulo(long t, nodeTitulo *pnodeTitulo);
+void writenodeTitulo(long t, nodeTitulo *pnodeTitulo);
+long getnodeTitulo(void);
+int binsearchTitulo(char x[301], campoTitulo *a, int n);
+status searchTitulo(char x[301]);
+status insTitulo(char x[301], int hash, long t, char *y, int *z, long *u);
+status insertTitulo(char x[301], int hash);
+void freenodeTitulo(long t);
+void rdstartTitulo(void);
+void wrstartTitulo(void);
+void printtreeTitulo(long t);
+
+/**********************END FUNCTION PROTOTYPES***************************/
+
+
 void inicializarHash();
 void upload(char * path);
 int calculaChave (int id);
@@ -247,6 +281,20 @@ int main()
                 
             case '3': //seek1 <id>
                 if (sysStatus == 1) {
+                    printf("BUSCA POR ID NO ARQUIVO DE INDICE\n\nID: ");
+                    scanf("%d", &idbusca);
+                    
+                    search(idbusca);
+                    
+                    /*
+                    achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
+                    if (!achou) {
+                        printf("REGISTRO NAO ENCONTRADO.\n");
+                    } else {
+                        printf("REGISTRO ENCONTRADO:\n\n");
+                        imprimirArtigo(aBuscado);
+                    }
+                    */
                     
                 } else {
                     printf("BASE NAO POPULADA. FAZER UPLOAD DO ARQUIVO DE DADOS PRIMEIRO.\n");
@@ -278,11 +326,9 @@ int main()
         (void) getchar();
     } while (acao != 0);
     
-    fptree = idtree;
     wrstart();
     fclose(fptree);
     
-    fclose(fptree);
     return(0);
 }
 
@@ -341,15 +387,19 @@ long getnode(void)
 
 
 
-void found(long t,  int i)
+int found(long t,  int i)
 {
     node nod;
     
-    printf("Found in position %d of node with contents:  ", i);
+    //printf("Found in position %d of node with contents:  ", i);
     readnode(t, &nod);
-    for (i=0; i < nod.cnt; i++)
-        printf("  %d", nod.key[i].valor);
-    puts("");
+    printf("  %d : %d\n\n", nod.key[i].valor, nod.key[i].hash);
+    
+    return nod.key[i].hash;
+    
+//    for (i=0; i < nod.cnt; i++)
+//        printf("  %d", nod.key[i].valor);
+//    puts("");
     
 }
 
@@ -385,26 +435,25 @@ int binsearch(int x, campo *a, int n)
 }
 
 
-status search(int x)
+int search(int x)
 {
     int i, j, n;
     campo *k;
     node nod;
     long t = root;
     
-    puts("Caminho Encontrado:");
+    puts("RESULTADO DA BUSCA:");
     while (t != NIL){
         readnode(t, &nod);
         k = nod.key;
         //printf("Tnk: %d\n", k[0].valor);
         n = nod.cnt;
-        for (j=0; j < n; j++)
-            printf("  %d:%d", k[j].valor, k[j].hash);
-        puts("");
+//        for (j=0; j < n; j++)
+//            printf("  %d:%d", k[j].valor, k[j].hash);
+//        puts("");
         i = binsearch(x, k, n);
         if (i < n && x == k[i].valor){
-            found(t,i);
-            return(SUCCESS);
+            return(found(t,i));
         }
         t = nod.ptr[i];
     }
@@ -509,7 +558,6 @@ status ins(int x, int hash, long t, int *y, int *z, long *u)
 // x = chave/valor
 status insert(int x, int hash)
 {
-    printf("valor com hash: %d: %d\n\n", x, hash);
     
     long tnew, u;
     int xnew, hashnew;
@@ -616,6 +664,306 @@ void printtree(long t)
 
 
 
+
+
+void readnodeTitulo(long t, nodeTitulo *pnodeTitulo)
+{
+    if (t == rootTitulo){
+        *pnodeTitulo = rootnodeTitulo;
+        return;
+    }
+    if (fseek(fptreeTitulo, t, SEEK_SET))
+        error("fseek in readnodeTitulo 1");
+    if (fread(pnodeTitulo, sizeof(nodeTitulo), 1, fptreeTitulo) == 0)
+        error("fread in readnodeTitulo 2");
+}
+
+
+void writenodeTitulo(long t, nodeTitulo *pnodeTitulo)
+{
+    if (t == rootTitulo)
+        rootnodeTitulo = *pnodeTitulo;
+    if (fseek(fptreeTitulo, t, SEEK_SET))
+        error("fseek in writenodeTitulo");
+    if (fwrite(pnodeTitulo, sizeof(nodeTitulo), 1, fptreeTitulo) == 0)
+        error("fwrite in writenodeTitulo");
+}
+
+
+
+long getnodeTitulo(void)
+{
+    long t;
+    nodeTitulo nod;
+    
+    if (freelistTitulo == NIL) {
+        if (fseek(fptreeTitulo, 0L, SEEK_END))
+            error("fseek in getnodeTitulo");
+        t = ftell(fptreeTitulo);
+        writenodeTitulo(t, &nod);  }         /*  Allocate space on disk  */
+    
+    else{
+        t = freelistTitulo;
+        readnodeTitulo(t, &nod);             /*  To update freelistTitulo      */
+        freelistTitulo = nod.ptr[0];
+    }
+    return(t);
+}
+
+
+int binsearchTitulo(char x[301], campoTitulo *a, int n)
+{
+    int i, left, right;
+    
+    if (x <= a[0].valor)
+        return 0;
+    if (x > a[n-1].valor)
+        return n;
+    left = 0;
+    right = n-1;
+    while (right -  left > 1){
+        i = (right + left)/2;
+        if (x <= a[i].valor)
+            right = i;
+        else
+            left = i;
+    }
+    return(right);
+}
+
+
+status searchTitulo(char x[301])
+{
+    int i, j, n;
+    campoTitulo *k;
+    nodeTitulo nod;
+    long t = rootTitulo;
+    
+    puts("Caminho Encontrado:");
+    while (t != NIL){
+        readnodeTitulo(t, &nod);
+        k = nod.key;
+        //printf("Tnk: %d\n", k[0].valor);
+        n = nod.cnt;
+        for (j=0; j < n; j++)
+            printf("  %s:%d", k[j].valor, k[j].hash);
+        puts("");
+        i = binsearchTitulo(x, k, n);
+        if (i < n && x == k[i].valor){
+            found(t,i);
+            return(SUCCESS);
+        }
+        t = nod.ptr[i];
+    }
+    return(NOTFOUND);
+}
+
+
+
+/*
+ insertTitulo x in B-tree with rootTitulo t.  If not completely successful, the
+ integer *y and the pointer *u remain to be inserted.
+ */
+
+//        valor / rooot / xnew  / tnew
+status insTitulo(char x[301], int hash, long t, char *y, int *z, long *u)
+{
+    long tnew, p_final, *p;
+    int i, j, *n, hash_final, hashnew;
+    
+    char xnew[301], k_final[301];
+    campoTitulo *k;
+    status code;
+    nodeTitulo nod, newnod;
+    
+    /*  Examine whether t is a pointer member in a leaf  */
+    if (t == NIL){
+        *u = NIL;
+        strcpy(y, x);
+        *z = hash;
+        return(INSERTNOTCOMPLETE);
+    }
+    
+    readnodeTitulo(t, &nod);
+    n = & nod.cnt;
+    k = nod.key;
+    p = nod.ptr;
+    /*  Select pointer p[i] and try to insertTitulo x in  the subtree of whichp[i]
+     is  the rootTitulo:  */
+    i = binsearchTitulo(x, k, *n);
+    if (i < *n && !strcmp(x,k[i].valor))
+        return(DUPLICATEKEY);
+    code = insTitulo(x, hash, p[i], xnew, &hashnew, &tnew);
+    if (code != INSERTNOTCOMPLETE)
+        return code;
+    /* Insertion in subtree did not completely succeed; try to insertTitulo xnew and
+     tnew in the current nodeTitulo:  */
+    if (*n < MM) {
+        i = binsearchTitulo(xnew, k, *n);
+        for (j = *n; j > i; j--){
+            k[j] = k[j-1];
+            p[j+1] = p[j];
+        }
+        strcpy(k[i].valor, xnew);
+        k[i].hash = hashnew;
+        p[i+1] = tnew;
+        ++*n;
+        writenodeTitulo(t, &nod);
+        return(SUCCESS);
+    }
+    /*  The current nodeTitulo was already full, so split it.  Pass item k[M] in the
+     middle of the augmented sequence back through parameter y, so that it
+     can move upward in the tree.  Also, pass a pointer to the newly created
+     nodeTitulo back through u.  Return INSERTNOTCOMPLETE, to report that insertion
+     was not completed:    */
+    if (i == MM){
+        strcpy(k_final, xnew);
+        hash_final = hashnew;
+        p_final = tnew;
+    }else{
+        strcpy(k_final, k[MM-1].valor);
+        hash_final = k[MM-1].hash;
+        p_final = p[MM];
+        for (j=MM-1; j>i; j--){
+            k[j] = k[j-1];
+            p[j+1] = p[j];
+        }
+        strcpy(k[i].valor, xnew);
+        k[i].hash = hashnew;
+        p[i+1] = tnew;
+    }
+    strcpy(y, k[M].valor);
+    *z = k[M].hash;
+    *n = M;
+    *u = getnodeTitulo();
+    newnod.cnt = M;
+    for (j=0; j< M-1; j++){
+        newnod.key[j] = k[j+M+1];
+        newnod.ptr[j] = p[j+M+1];
+    }
+    newnod.ptr[M-1] = p[MM];
+    strcpy(newnod.key[M-1].valor, k_final);
+    newnod.key[M-1].hash = hash_final;
+    newnod.ptr[M] = p_final;
+    writenodeTitulo(t, &nod);
+    writenodeTitulo(*u, &newnod);
+    return(INSERTNOTCOMPLETE);
+}
+
+
+/*  Driver function for nodeTitulo insertion, called only in the main function.
+ 
+ Most of the work is delegated to 'insTitulo'.
+ */
+// x = chave/valor
+status insertTitulo(char x[301], int hash)
+{
+    
+    long tnew, u;
+    int hashnew;
+    char xnew[301];
+    status code = insTitulo(x, hash, rootTitulo, xnew, &hashnew, &tnew);
+    
+    if (code == DUPLICATEKEY)
+        printf("Duplicate uid %s ignored \n", x);
+    else
+        if (code == INSERTNOTCOMPLETE){
+            u = getnodeTitulo();
+            rootnodeTitulo.cnt = 1;
+            strcpy(rootnodeTitulo.key[0].valor, xnew);
+            rootnodeTitulo.key[0].hash = hashnew;
+            rootnodeTitulo.ptr[0] = rootTitulo;
+            rootnodeTitulo.ptr[1] = tnew;
+            rootTitulo = u;
+            writenodeTitulo(u, &rootnodeTitulo);
+            code = SUCCESS;
+        }
+    return(code);     /*  return value: SUCCESS  of DUPLICATEKEY  */
+}
+
+
+
+void freenodeTitulo(long t)
+{
+    nodeTitulo nod;
+    
+    readnodeTitulo(t, &nod);
+    nod.ptr[0] = freelistTitulo;
+    freelistTitulo = t;
+    writenodeTitulo(t, &nod);
+}
+
+
+
+void rdstartTitulo(void)
+{
+    
+    if (fseek(fptreeTitulo, 0L, SEEK_SET))
+        error("fseek in rdstartTitulo 1");
+    if (fread(startTitulo, sizeof(long), 2, fptreeTitulo) == 0)
+        error("fread in rdstartTitulo 2");
+    readnodeTitulo(startTitulo[0], &rootnodeTitulo);
+    rootTitulo = startTitulo[0];
+    freelistTitulo = startTitulo[1];
+}
+
+void wrstartTitulo(void)
+{
+    
+    startTitulo[0] = rootTitulo;
+    startTitulo[1] = freelistTitulo;
+    if (fseek(fptreeTitulo, 0L, SEEK_SET))
+        error("fseek in wrstartTitulo");
+    if (fwrite(startTitulo, sizeof(long), 2, fptreeTitulo) == 0)
+        error("fwrite in wrstartTitulo");
+    if (rootTitulo != NIL)
+        writenodeTitulo(rootTitulo, &rootnodeTitulo);
+}
+
+void printtreeTitulo(long t)
+{
+    static int position=0;
+    int i, n;
+    campoTitulo *k;
+    nodeTitulo nod;
+    
+    if (t != NIL){
+        position += 6;
+        readnodeTitulo(t, &nod);
+        k = nod.key;
+        n = nod.cnt;
+        printf("%*s", position, "");
+        for (i=0; i<n; i++)
+            printf(" %s:%d", k[i].valor, k[i].hash);
+        puts("");
+        for (i=0; i<=n; i++)
+            printtreeTitulo(nod.ptr[i]);
+        position -= 6;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Função para calcular a chave do hash no qual o artigo será inserido.
 int calculaChave (int id){
     return (id % NUMERO_BUCKETS);
@@ -625,12 +973,10 @@ int calculaChave (int id){
 void inicializarHash(){
     int i;
     
-    idtree = fopen(idpath, "r+b");
-    fptree = idtree;
+    fptree = fopen(idpath, "r+b");
     if (fptree == NULL) {
         // abre o arquivo
-        idtree = fopen(idpath, "w+b");
-        fptree = idtree;
+        fptree = fopen(idpath, "w+b");
         wrstart();
     }else{
         struct stat st;
@@ -644,32 +990,28 @@ void inicializarHash(){
             //prepara para primeiro inicio
             wrstart();
         }
-        printtree(root);
+        //printtree(root);
     }
     
-    titulotree = fopen(titulopath, "r+b");
-    fptree = titulotree;
-    if (fptree == NULL) {
+    fptreeTitulo = fopen(titulopath, "r+b");
+    if (fptreeTitulo == NULL) {
         // abre o arquivo
-        titulotree = fopen(titulopath, "w+b");
-        fptree = titulotree;
-        wrstart();
+        fptreeTitulo = fopen(titulopath, "w+b");
+        wrstartTitulo();
     }else{
         struct stat st;
-        stat(titulopath, &st);
+        stat(idpath, &st);
         long long int size = st.st_size;
         //verifica se o arquivo ja foi criado mas esta vazio
         if (size > 0) {
             //continua de onde parou os dados
-            rdstart();
+            rdstartTitulo();
         } else {
             //prepara para primeiro inicio
-            wrstart();
+            wrstartTitulo();
         }
-        printtree(root);
+        //printtreeTitulo(rootTitulo);
     }
-    
-    fptree = idtree;
     
     
     void *bloco = NULL;
@@ -848,7 +1190,7 @@ int buscarArtigo(int id, int chave, int blocosLidos){
 // Função que lê o arquivo de entrada e manda inserir os artigos no arquivo hash.
 void upload(char * path){
     
-    printf("entrou\n");
+    printf("UPLOADING...\n");
     printf("\n");
     
     
@@ -864,9 +1206,6 @@ void upload(char * path){
     char *citepage;
     char *timestamp;
     int chave;
-    
-    printf("aqui\n");
-    printf("\n");
     
     
     FILE *arquivoEntrada = fopen(path, "r");
@@ -933,13 +1272,19 @@ void upload(char * path){
         int hash = inserirArtigo(chave, artigo, chave);
         
         
-        //muda ponteiro para o arquivo de id
-        fptree = idtree;
         if (insert(artigo->id, hash) == SUCCESS) {
-            printtree(root);
+            //printtree(root);
         }else {
             printf("erro inserir");
         }
+        
+        if (insertTitulo(artigo->titulo, hash) == SUCCESS) {
+            //printtreeTitulo(rootTitulo);
+        }else {
+            printf("erro inserir");
+        }
+        
+        
         
     }
     
