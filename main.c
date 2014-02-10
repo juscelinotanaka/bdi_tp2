@@ -280,7 +280,7 @@ int main()
     printf("\n");
     inicializarHash();
     
-    printf("VERIFICANDO STATUS...");
+    printf("VERIFICANDO STATUS DA BASE...");
     printf("\n");
     openID();
     achou = search(1);
@@ -306,8 +306,8 @@ int main()
         printf("* 0 - SAIR                                          *\n");
         printf("*****************************************************\n");
         printf("* Opcao: ");
+        
         scanf("%c", &acao);
-        (void) getchar();
         
         // printf("\n");
         
@@ -376,6 +376,7 @@ int main()
                     //Low-cost Outdoor Robot Platform for the Penn State Abington Mini Grand Challenge
                     printf("BUSCA POR TITULO NO ARQUIVO DE INDICE\n\nTITULO: ");
                     char tituloBusca[301];
+                    getchar();
                     gets(tituloBusca);
                     
                     printf("Buscando: ");
@@ -424,12 +425,9 @@ int main()
             break;
         }
         
-        (void) getchar();
+        getchar();
+        
     } while (acao != 0);
-    
-    
-    
-    
     
     return(0);
 }
@@ -556,13 +554,14 @@ int binsearch(int x, campo *a, int n)
 
 int search(int x)
 {
-    int i, n;
+    int i, n, nosLidos = 0;
     campo *k;
     node nod;
     long t = root;
     
     puts("RESULTADO DA BUSCA:\n");
     while (t != NIL){
+        nosLidos++;
         readnode(t, &nod);
         k = nod.key;
         //printf("Tnk: %d\n", k[0].valor);
@@ -572,6 +571,7 @@ int search(int x)
         //        puts("");
         i = binsearch(x, k, n);
         if (i < n && x == k[i].valor){
+            printf("NOS LIDOS: %d\n\n", nosLidos);
             return(found(t,i));
         }
         t = nod.ptr[i];
@@ -856,22 +856,20 @@ int binsearchTitulo(char x[301], campoTitulo *a, int n)
 
 int searchTitulo(char x[300])
 {
-    int i, n;
+    int i, n, nosLidos = 0;
     campoTitulo *k;
     nodeTitulo nod;
     long t = rootTitulo;
     
     puts("RESULTADO DA BUSCA:\n");
     while (t != NIL){
+        nosLidos++;
         readnodeTitulo(t, &nod);
         k = nod.key;
-        //printf("Tnk: %d\n", k[0].valor);
         n = nod.cnt;
-        //        for (j=0; j < n; j++)
-        //            printf("  %d:%d", k[j].valor, k[j].hash);
-        //        puts("");
         i = binsearchTitulo(x, k, n);
         if (i < n && !strcmp(x, k[i].valor)) {
+            printf("NOS LIDOS: %d\n\n", nosLidos);
             return(foundTitulo(t,i));
         }
         t = nod.ptr[i];
@@ -1393,7 +1391,7 @@ void upload(char * path){
     if (arquivoEntrada == NULL) {
         printf("ERRO AO ABRIR O ARQUIVO DE ENTRADA. VERIFIQUE O NOME DO ARQUIVO E/OU CAMINHO.");
         printf("\n");
-        exit(0);
+        return;
     }
     
     arquivoHash = fopen("hash_file.txt", "rb+");
@@ -1477,71 +1475,3 @@ void upload(char * path){
     fclose(arquivoEntrada);
     
 }
-
-//1228800000
-//978944000
-
-
-
-
-/* // insert que funciona
- fptree = fopen(idpath, "r+b");
- if (fptree == NULL) {
- // abre o arquivo
- fptree = fopen(idpath, "w+b");
- wrstart();
- }else{
- struct stat st;
- stat(idpath, &st);
- long long int size = st.st_size;
- //verifica se o arquivo ja foi criado mas esta vazio
- if (size > 0) {
- //continua de onde parou os dados
- rdstart();
- } else {
- //prepara para primeiro inicio
- wrstart();
- }
- printtree(root);
- }
- */
-
-
-/*
- 
- for ( ; ; ) {
- printf("Informe um numero seguido de I, D, or P (para Inserir, \n"
- "Deletar and Procurar), ou entre Q para sair: ");
- code = scanf("%d", &x);
- scanf(" %c", &ch);
- ch = toupper(ch);
- if (code)
- 
- switch (ch) {
- 
- case 'I':
- hash = x % T;
- if (insert(x, hash) == SUCCESS)
- printtree(root);
- break;
- 
- case 'P': if (search(x) == NOTFOUND)
- puts("Not found");
- break;
- }
- else
- if (ch == 'Q')
- break;
- }
- 
- */
-
-
-
-
-/*
- 
- /Users/juscelintanaka/Documents/19.csv
- 
- */
-
