@@ -282,9 +282,12 @@ int main()
     
     printf("VERIFICANDO STATUS...");
     printf("\n");
-    achou = buscarArtigo(1, calculaChave(1), 0);
+    openID();
+    achou = search(1);
+    closeID();
     
-    if (!achou) {
+    //se achou o registro 1 significa que a base ja esta populada
+    if (achou == -1) { // -1 == nao encontrou
         setStatus(0);
     } else {
         setStatus(1);
@@ -679,9 +682,10 @@ status insert(int x, int hash)
     int xnew, hashnew;
     status code = ins(x, hash, root, &xnew, &hashnew, &tnew);
     
-    if (code == DUPLICATEKEY)
+    if (code == DUPLICATEKEY) {
         printf("Duplicate uid %d ignored \n", x);
-    else
+        exit(0);
+    } else
         if (code == INSERTNOTCOMPLETE){
             u = getnode();
             rootnode.cnt = 1;
@@ -978,9 +982,11 @@ status insertTitulo(char x[301], int hash)
     char xnew[301];
     status code = insTitulo(x, hash, rootTitulo, xnew, &hashnew, &tnew);
     
-    if (code == DUPLICATEKEY)
-        printf("Duplicate uid %s ignored \n", x);
-    else
+    if (code == DUPLICATEKEY) {
+        printf("Duplicate uid ignored: ");
+        puts(x);
+        exit(0);
+    } else
         if (code == INSERTNOTCOMPLETE){
             u = getnodeTitulo();
             rootnodeTitulo.cnt = 1;
