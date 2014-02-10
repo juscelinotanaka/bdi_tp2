@@ -294,17 +294,17 @@ int main()
     }
     
     do {
-        printf("*****************************************************\n");
-        printf("* STATUS DO SISTEMA: %30s *\n", msgStatus);
-        printf("*****************************************************\n");
-        printf("* SELECIONE A OPCAO DESEJADA                        *\n");
-        printf("* 1 - UPLOAD ARQUIVO                                *\n");
-        printf("* 2 - BUSCA POR ID NO ARQUIVO DE DADOS              *\n");
-        printf("* 3 - BUSCA POR ID NO ARQUIVO DE INDICE             *\n");
-        printf("* 4 - BUSCA POR TITULO NO ARQUIVO DE INDICE         *\n");
-        printf("*                                                   *\n");
-        printf("* 0 - SAIR                                          *\n");
-        printf("*****************************************************\n");
+        printf("*********************************************************\n");
+        printf("* STATUS DO SISTEMA: %30s     *\n", msgStatus);
+        printf("*********************************************************\n");
+        printf("* SELECIONE A OPCAO DESEJADA                            *\n");
+        printf("* 1 - UPLOAD ARQUIVO                                    *\n");
+        printf("* 2 - BUSCA POR ID NO ARQUIVO DE HASH                   *\n");
+        printf("* 3 - BUSCA POR ID NO ARQUIVO DE INDICE PRIMARIO        *\n");
+        printf("* 4 - BUSCA POR TITULO NO ARQUIVO DE INDICE SECUNDARIO  *\n");
+        printf("*                                                       *\n");
+        printf("* 0 - SAIR                                              *\n");
+        printf("*********************************************************\n");
         printf("* Opcao: ");
         
         scanf("%c", &acao);
@@ -343,7 +343,7 @@ int main()
                 
             case '3': //seek1 <id>
                 if (sysStatus == 1) {
-                    printf("BUSCA POR ID NO ARQUIVO DE INDICE\n\nID: ");
+                    printf("BUSCA POR ID NO ARQUIVO DE INDICE PRIMARIO\n\nID: ");
                     scanf("%d", &idbusca);
                     
                     openID();
@@ -355,7 +355,7 @@ int main()
                     } else {
                         achou = buscarArtigo(idbusca, calculaChave(idbusca), 0);
                         if (!achou) {
-                            printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE DADOS.\n");
+                            printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE HASH.\n");
                         } else {
                             printf("REGISTRO ENCONTRADO:\n\n");
                             imprimirArtigo(aBuscado);
@@ -374,7 +374,7 @@ int main()
                     //Building Semantic Mappings from Databases to Ontologies
                     
                     //Low-cost Outdoor Robot Platform for the Penn State Abington Mini Grand Challenge
-                    printf("BUSCA POR TITULO NO ARQUIVO DE INDICE\n\nTITULO: ");
+                    printf("BUSCA POR TITULO NO ARQUIVO DE INDICE SECUNDARIO\n\nTITULO: ");
                     char tituloBusca[301];
                     getchar();
                     gets(tituloBusca);
@@ -391,7 +391,7 @@ int main()
                     } else {
                         achou = buscarArtigoPorTitulo(tituloBusca, calculaChave(idbusca), 0);
                         if (!achou) {
-                            printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE DADOS.\n");
+                            printf("REGISTRO NAO ENCONTRADO NO ARQUIVO DE HASH.\n");
                         } else {
                             printf("REGISTRO ENCONTRADO (%d):\n\n", resultadoBusca);
                             imprimirArtigo(aBuscado);
@@ -1224,7 +1224,6 @@ int buscarArtigo(int id, int chave, int blocosLidos){
                 achouArtigo = 1;
                 
                 if (DEBUGANDO) {
-                    printf("BUCKET: %d\n\n", chave);
                     
                     printf("ID: %d\n", artigos[j].id);
                     printf("Sigla: %s\n", artigos[j].sigla);
@@ -1234,10 +1233,12 @@ int buscarArtigo(int id, int chave, int blocosLidos){
                     printf("Citacoes: %d\n", artigos[j].citacoes);
                     printf("Citepage: %s\n", artigos[j].citepage);
                     printf("Timestamp: %s\n\n", artigos[j].timestamp);
-                    printf("Numero de Blocos Lidos: %d\n", blocosLidos);
-                    printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
+                   
                 }
                 
+                printf("BUCKET: %d\n", chave);
+                printf("Numero de Blocos Lidos: %d\n", blocosLidos);
+                printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
                 
                 aBuscado.id= artigos[j].id;
                 strcpy(aBuscado.sigla, artigos[j].sigla);
@@ -1312,7 +1313,6 @@ int buscarArtigoPorTitulo(char titulo[301], int chave, int blocosLidos){
                 achouArtigo = 1;
                 
                 if (DEBUGANDO) {
-                    printf("BUCKET: %d\n\n", chave);
                     
                     printf("ID: %d\n", artigos[j].id);
                     printf("Sigla: %s\n", artigos[j].sigla);
@@ -1322,10 +1322,12 @@ int buscarArtigoPorTitulo(char titulo[301], int chave, int blocosLidos){
                     printf("Citacoes: %d\n", artigos[j].citacoes);
                     printf("Citepage: %s\n", artigos[j].citepage);
                     printf("Timestamp: %s\n\n", artigos[j].timestamp);
-                    printf("Numero de Blocos Lidos: %d\n", blocosLidos);
-                    printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
+                    
                 }
                 
+                printf("BUCKET: %d\n", chave);
+                printf("Numero de Blocos Lidos: %d\n", blocosLidos);
+                printf("Numero de Total de Blocos do Arquivo: %d\n\n", NUMERO_BUCKETS*BLOCOS_POR_BUCKET);
                 
                 aBuscado.id= artigos[j].id;
                 strcpy(aBuscado.sigla, artigos[j].sigla);
